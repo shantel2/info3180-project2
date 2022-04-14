@@ -4,15 +4,17 @@ Jinja2 Documentation:    https://jinja.palletsprojects.com/
 Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
+import datetime
 
-from app import app
-from flask import render_template, request, jsonify, send_file
-from flask_login import current_user, login_user
-from flask_login.utils import login_required
+from app import app, db
+from flask import render_template, request, jsonify, send_file,flash,url_for,redirect
+from flask_login import current_user, login_user,login_required, logout_user
 import os
 from app.forms import *
 from app.models import *
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
+
 
 
 ###
@@ -32,42 +34,85 @@ def register():
             password= form.password.data
             fullname= form.fullname.data
             email= form.email.data
+            location = form.location.data
+            biography= form.biography.data
             photo = form.photo.data
-            
-            photo.save
+            filename= secure_filename(photo.fiename)
+            photo.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
 
+            userRecord = Users( 
+                username=username,
+                password=password,
+                fullname=fullname,
+                email=email,
+                location = location,
+                biography = biography,
+                photo = filename,
+                date_joined = datetime.now()
+            )
+            db.session.add(userRecord)
+            db.session.commit()
 
+            flash('User successfully registered', 'success')
+            return redirect(url_for('login'))
 
-
-
-.save
-    
-
-
+    return jsonify(errors=form_errors(form))        
 
 @app.route('/api/auth/login', methods='POST')
 def login():
-    return 
+    if current_user.is_authenticated:
+        return redirect(url_for('cars'))
 
-@login_required 
+    form = LoginForm()
+
+    if request.method == "POST" and form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+
+        user = Users.query.filter_by(username=username).first()
+
+        if user is not None:
+            if check_password_hash(user.password,password):
+                login_user(user)
+                flash('You have been successfully logged in.', 'success')
+                return redirect(url_for('cars'))
+            else:
+                flash("Username or password is incorrect", "danger")
+        else:
+            return redirect(url_for('register'))
+
+
+    flash_errors(form)
+            
+            
 @app.route('/api/auth/logout', methods='POST')
+@login_required 
 def logout():
-    return 
+    logout_user()
+    flash('You were logged out', 'success')
+    return redirect(url_for('home'))
 
-@login_required
+
 @app.route('/api/cars', methods='GET')
-def cars():
-    return
-
 @login_required
+def cars():
+    cars= Cars.query.all()
+    return cars
+
 @app.route('/api/cars', methods='POST')
+@login_required
 def cars():
     return
 
-@login_required
 @app.route('/api/cars/<car_id>', methods='GET')
-def carsSpecific():
-    return
+@login_required
+def carsSpecific(id):
+    car = Cars.query.filter_by(id=id).first()
+
+    data=[{'id': car.id, 'description':car.description, 'make':car.make, "model":car.model,
+    "colour": car.colour, "year": car.year, "transmission":car.transmission, 
+    "car_type": car.car_type, "price":car.price, "photo":car.photo, "user_id":car.user_id}]
+    return jsonify(data=data)
 
 @login_required
 @app.route('/api/cars/<car_id>/favourite', methods='POST')
