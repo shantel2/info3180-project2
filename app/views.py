@@ -7,7 +7,12 @@ This file creates your application.
 
 from app import app
 from flask import render_template, request, jsonify, send_file
+from flask_login import current_user, login_user
+from flask_login.utils import login_required
 import os
+from app.forms import *
+from app.models import *
+from werkzeug.utils import secure_filename
 
 
 ###
@@ -17,6 +22,81 @@ import os
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
+
+@app.route('/api/register', methods = 'POST')
+def register():    
+    form= RegisterForm()
+    if request.method=='POST':
+        if form.validate_on_submit():
+            username= form.username.data
+            password= form.password.data
+            fullname= form.fullname.data
+            email= form.email.data
+            photo = form.photo.data
+            
+            photo.save
+
+
+
+
+
+.save
+    
+
+
+
+@app.route('/api/auth/login', methods='POST')
+def login():
+    return 
+
+@login_required 
+@app.route('/api/auth/logout', methods='POST')
+def logout():
+    return 
+
+@login_required
+@app.route('/api/cars', methods='GET')
+def cars():
+    return
+
+@login_required
+@app.route('/api/cars', methods='POST')
+def cars():
+    return
+
+@login_required
+@app.route('/api/cars/<car_id>', methods='GET')
+def carsSpecific():
+    return
+
+@login_required
+@app.route('/api/cars/<car_id>/favourite', methods='POST')
+def carsFavorite():
+    return
+
+@login_required
+@app.route('/api/search', methods='GET')
+def search():
+    return
+
+@login_required
+@app.route('/api/users/<user_id>', methods='GET')
+def user():
+    return
+
+@login_required
+@app.route('/api/users/<user_id>/favorites', methods='GET')
+def userFavorite():
+    return
+
+
+
+
+
+
+
+
+
 
 
 ###
