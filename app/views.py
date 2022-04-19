@@ -25,7 +25,7 @@ from werkzeug.security import check_password_hash
 def index():
     return jsonify(message="This is the beginning of our API")
 
-@app.route('/api/register', methods = 'POST')
+@app.route('/api/register', methods = ['POST'])
 def register():    
     form= RegisterForm()
     if request.method=='POST':
@@ -58,7 +58,7 @@ def register():
 
     return jsonify(errors=form_errors(form))        
 
-@app.route('/api/auth/login', methods='POST')
+@app.route('/api/auth/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('cars'))
@@ -82,55 +82,147 @@ def login():
             return redirect(url_for('register'))
 
 
-    flash_errors(form)
+    else:
+        error={
+            "error": form_errors(form)
+        }
+        return error
             
             
-@app.route('/api/auth/logout', methods='POST')
+@app.route('/api/auth/logout', methods=['POST'])
 @login_required 
 def logout():
     logout_user()
     flash('You were logged out', 'success')
+
+    #PUT CORRECT ROUTE
     return redirect(url_for('home'))
 
 
-@app.route('/api/cars', methods='GET')
+#@app.route('/api/cars', methods=['GET'])
+#@login_required
+#def cars():
+#    cars= Cars.query.all()
+#    return cars
+
+@app.route('/api/cars', methods=['POST','GET'])
 @login_required
 def cars():
-    cars= Cars.query.all()
-    return cars
+    form= AddNewCarForm()
+    if request.method=="POST":
+        if form.validate_on_submit():
+            make= form.make.data
+            model= form.model.data
+            color= form.color.data
+            year= form.year.data
+            price= form.price.data
+            car_type= form.Car_Type.data
+            transmission= form.transmission.data
+            description=form.description.data
+            photo= form.photo.data
+            filename= secure_filename(photo.filename)
 
-@app.route('/api/cars', methods='POST')
+            photo.save(os.path.join(app.config["UPLOAD_FOLDER", filename]))
+
+            car= Cars(
+                description=description,
+                make=make,
+                model= model,
+                color=color,
+                year=year,
+                transmission=transmission,
+                car_type=car_type,
+                price= price,
+                photo= filename,
+                user_id= flask_login.current_user.id
+                #ADD USER ID
+            )
+
+            db.session.add(car)
+            db.session.commit()
+            
+            #should we send over user id?
+            data={
+                "message": "Car successfully added",
+                "description": description,
+                "make":make,
+                "model": model,
+                "color": color,
+                "year":year,
+                "transmission":transmission,
+                "car_type":car_type,
+                "price":price,
+                "filename": filename
+            }
+            #PUT CORRECT ROUTE
+            return jsonify(data=data)
+
+        else:
+            error={
+                "error": form_errors(form)
+            }
+            return error
+
+    elif request.method=="GET":
+        cars= Cars.query.all()
+        return cars
+
+
+@app.route('/api/cars/<car_id>', methods=['GET'])
 @login_required
-def cars():
-    return
+def carsSpecific(car_id):
+    car = Cars.query.filter_by(id=car_id).first()
 
-@app.route('/api/cars/<car_id>', methods='GET')
-@login_required
-def carsSpecific(id):
-    car = Cars.query.filter_by(id=id).first()
+    data={
+    "id": car.id, 
+    "description":car.description, 
+    "make":car.make, 
+    "model":car.model,
+    "colour": car.colour, 
+    "year": car.year, 
+    "transmission":car.transmission, 
+    "car_type": car.car_type, 
+    "price":car.price, 
+    "photo":car.photo, 
+    "user_id":car.user_id}
 
-    data=[{'id': car.id, 'description':car.description, 'make':car.make, "model":car.model,
-    "colour": car.colour, "year": car.year, "transmission":car.transmission, 
-    "car_type": car.car_type, "price":car.price, "photo":car.photo, "user_id":car.user_id}]
     return jsonify(data=data)
 
+@app.route('/api/cars/<car_id>/favourite', methods=['POST'])
 @login_required
-@app.route('/api/cars/<car_id>/favourite', methods='POST')
-def carsFavorite():
+def carsFavorite(car_id):
+    fav_car= Cars.query.filter(id=car_id).first()
+    #ADD CAR TO FAVORITY FOR LOGGED IN USER
     return
 
+
+@app.route('/api/search', methods=['GET'])
 @login_required
-@app.route('/api/search', methods='GET')
 def search():
-    return
+    form= ExploreForm()
+    if request.method=="GET":
+        if form.validate_on_submit():
+            make_model= form.make_or_model.data
 
-@login_required
-@app.route('/api/users/<user_id>', methods='GET')
-def user():
-    return
+            cars= Cars.query.filter(make=make_model, model=make_model).all()
+            return cars
+        else:
+            error={
+                "error": form_errors(form)
+            }
+            return error
 
+
+    
+
+@app.route('/api/users/<user_id>', methods=['GET'])
 @login_required
-@app.route('/api/users/<user_id>/favorites', methods='GET')
+def user(user_id):
+    user= Users.query.filter(id=user_id).first()
+    return user
+
+@app.route('/api/users/<user_id>/favorites', methods=['GET'])
+@login_required
 def userFavorite():
     return
 
