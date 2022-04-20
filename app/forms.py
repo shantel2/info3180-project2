@@ -21,7 +21,9 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
 
 class ExploreForm(FlaskForm):
-    make_or_model = StringField('Make or Model', validators=[DataRequired()])
+    make = StringField('Make', validators=[DataRequired()])
+    model = StringField('Model', validators=[DataRequired()])
+
 
 class AddNewCarForm(FlaskForm):
     make = StringField('Make', validators=[DataRequired()])
